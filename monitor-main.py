@@ -3,6 +3,7 @@ import os.path
 import time
 
 import psutil
+from tqdm import tqdm
 
 
 def main_monitor(max_n_obs, out_filename, obs_interval_sec):
@@ -22,7 +23,7 @@ def main_monitor(max_n_obs, out_filename, obs_interval_sec):
     print('Monitoring for %d times' % max_n_obs)
     obs_count = 0
 
-    while obs_count < max_n_obs:
+    for obs_count in tqdm(range(max_n_obs), desc='Monitor Progress Bar'):
         start_time = time.time()
         # CPU Data
         cpu_t_p = psutil.cpu_times_percent(interval=0.1, percpu=False)._asdict()
@@ -45,6 +46,8 @@ def main_monitor(max_n_obs, out_filename, obs_interval_sec):
         end_time = time.time()
         exe_time_s = time.time() - start_time
         sleep_s = obs_interval_sec - exe_time_s
+
+        #
         if exe_time_s < obs_interval_sec:
             time.sleep(obs_interval_sec - exe_time_s)
         else:
