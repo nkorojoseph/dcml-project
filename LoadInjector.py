@@ -1,15 +1,14 @@
 import multiprocessing
 import os.path
 import random
-import signal
 import subprocess
 import tempfile
 import threading
 import time
-import urllib
-from urllib.error import URLError
-from multiprocessing import Pool, Event, cpu_count
+from multiprocessing import Pool, cpu_count
 from urllib.request import urlopen
+
+# SUPPORT METHODS
 
 def current_ms():
     """
@@ -19,7 +18,7 @@ def current_ms():
     return round(time.time() * 1000)
 
 
-def url_reader(sites_urls: list, url_index: int = 0, duration_ms :int = 1000):
+def url_reader(sites_urls: list, url_index: int = 0, duration_ms: int = 1000):
     """
     Function to continuously read data from remote urls
     :param duration_ms: duration of the task in ms
@@ -39,9 +38,23 @@ def url_reader(sites_urls: list, url_index: int = 0, duration_ms :int = 1000):
         else:
             time.sleep(0.0001)
 
+
+def stress_cpu(x: int = 1234):
+    """
+    Function to be used to stress the CPU. Computes x^2
+    :param x: the number to compute x^2 of
+    :return: None
+    """
+    while True:
+        x * x
+
+
+# ABSTRACT CLASS FOR INJECTIONS
+
 class LoadInjector:
     """
-    Abstract class for Injecting Errors in the System probes
+    Abstract class for Injecting Errors in the System
+    Should you want to implement your own injector, just extend/override this class
     """
 
     def __init__(self, tag: str = '', duration_ms: float = 1000):
@@ -56,7 +69,7 @@ class LoadInjector:
         self.injected_interval = []
         self.init()
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         return self.valid
 
     def init(self):
@@ -87,7 +100,7 @@ class LoadInjector:
 
     def force_close(self):
         """
-        Try to force-close the injector
+        Tries to force-close the injector
         """
         pass
 
@@ -99,12 +112,17 @@ class LoadInjector:
 
     def get_name(self) -> str:
         """
-        Abstract method to be overridden
+        Abstract method to be overridden, provides a string description of the injector
         """
         return "[" + self.tag + "]Injector" + "(d" + str(self.duration_ms) + ")"
 
     @classmethod
     def fromJSON(cls, job):
+        """
+        This function allows to create an instance of an injector from a json description of the injector
+        :param job: the JSON description of the injector
+        :return: the injector object (subclass of LoadInjector)
+        """
         if job is not None:
             if 'type' in job:
                 if job['type'] in {'Memory', 'RAM', 'MemoryUsage', 'Mem', 'MemoryStress'}:
@@ -122,9 +140,11 @@ class LoadInjector:
         return None
 
 
+# SUBCLASSES OF THE LOADINJECTOR CLASS
+
 class SpinInjection(LoadInjector):
     """
-    SpinLoop Error
+    SpinLoop Error. Simple injection that runs a thread stuck in an endless loop
     """
 
     def __init__(self, tag: str = '', duration_ms: float = 1000):
@@ -233,7 +253,8 @@ class DiskStressInjection(LoadInjector):
 
 class CPUStressInjection(LoadInjector):
     """
-    CPUStress Error
+    CPUStress Error, executes many parallel threads that compute a very simple arithmetic operation
+    without storing results anywhere
     """
 
     def __init__(self, tag: str = '', duration_ms: float = 1000):
@@ -250,7 +271,7 @@ class CPUStressInjection(LoadInjector):
         self.completed_flag = False
         start_time = current_ms()
         self.poolc = Pool(cpu_count())
-        self.poolc.map_async(self.stress_cpu, range(cpu_count()))
+        self.poolc.map_async(stress_cpu, range(cpu_count()))
         time.sleep((self.duration_ms - (current_ms() - start_time)) / 1000.0)
         if self.poolc is not None:
             self.poolc.terminate()
@@ -264,10 +285,6 @@ class CPUStressInjection(LoadInjector):
         if self.poolc is not None:
             self.poolc.terminate()
         self.completed_flag = True
-
-    def stress_cpu(self, x: int = 1234):
-        while True:
-            x * x
 
     def get_name(self) -> str:
         """

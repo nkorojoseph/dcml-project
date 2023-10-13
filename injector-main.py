@@ -5,7 +5,6 @@ import random
 import threading
 import time
 
-import psutil
 from tqdm import tqdm
 
 from LoadInjector import LoadInjector, current_ms
@@ -15,10 +14,12 @@ def main_injector(max_n_obs: int, injectors: list, obs_interval_sec: int = 1, in
                   inj_cooldown_sec: int = 2, inj_probability: float = 0.2, verbose: bool = True):
     """
     Main function for monitoring
+    :param inj_cooldown_sec: time to wait after an injection and before activating a new one (seconds)
+    :param inj_duration_sec: duration of the injection (seconds)
     :param verbose: True if debug information has to be shown
     :param injectors: list of LoadInjector objects
     :param inj_probability: float number which represents a probability of an injection to take place
-    :param obs_interval_sec: seconds in between two observations
+    :param obs_interval_sec: seconds in between two observations (seconds)
     :param max_n_obs: maximum number of observations
     :return: list of dictionaries containing activations of injections
     """
@@ -39,6 +40,7 @@ def main_injector(max_n_obs: int, injectors: list, obs_interval_sec: int = 1, in
             if current_inj is None and inj_timer == 0 \
                     and ((max_n_obs - obs_id - 1) * cycle_ms > inj_duration_sec) \
                     and (random.randint(0, 999) / 999.0) <= inj_probability:
+
                 # Randomly chooses an injector and performs injection
                 while current_inj is None:
                     inj_index = random.randint(0, len(injectors) - 1)
@@ -46,12 +48,16 @@ def main_injector(max_n_obs: int, injectors: list, obs_interval_sec: int = 1, in
                         current_inj = injectors[inj_index]
                 if verbose:
                     print("Injecting with injector '%s'" % current_inj.get_name())
-                inj_thread = threading.Thread(target=current_inj.inject)
-                inj_thread.start()
+
+                # Starts the injection thread
+                current_inj.inject()
                 inj_timer = inj_duration_sec + inj_cooldown_sec
+
+            # Sleep to synchronize with cycle time
             sleep_s = (cycle_ms - (current_ms() - start_ms)) / 1000.0
             if sleep_s > 0:
                 time.sleep(sleep_s)
+
             # Managing cooldown
             inj_timer = inj_timer - cycle_ms if inj_timer > 0 else 0
             if inj_timer < inj_cooldown_sec:
@@ -126,7 +132,7 @@ if __name__ == "__main__":
                                    inj_duration_sec=inj_duration_sec,
                                    inj_cooldown_sec=2,
                                    inj_probability=0.4,
-                                   verbose=True)
+                                   verbose=False)
 
     # Checking of inj_filename already exists: if yes, delete
     if os.path.exists(inj_filename):
