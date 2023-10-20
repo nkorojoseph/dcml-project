@@ -2,7 +2,6 @@ import csv
 import json
 import os.path
 import random
-import threading
 import time
 
 from tqdm import tqdm
@@ -117,7 +116,8 @@ if __name__ == "__main__":
     """
 
     # General variables
-    inj_filename = 'output_folder/inj_info.csv'
+    out_folder = 'output_folder'
+    inj_filename = 'inj_info.csv'
     inj_json = 'input_folder/injectors_json.json'
     inj_duration_sec = 2
     exp_duration = 20
@@ -134,7 +134,12 @@ if __name__ == "__main__":
                                    inj_probability=0.4,
                                    verbose=False)
 
+    # Checking of out_folder already exists: if yes, delete
+    if not os.path.exists(out_folder):
+        os.mkdir(out_folder)
+
     # Checking of inj_filename already exists: if yes, delete
+    inj_filename = os.path.join(out_folder, inj_filename)
     if os.path.exists(inj_filename):
         os.remove(inj_filename)
 
