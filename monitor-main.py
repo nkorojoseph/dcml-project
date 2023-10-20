@@ -89,7 +89,7 @@ def monitor_system():
     return python_data
 
 
-def main_monitor(max_n_obs, out_filename, obs_interval_sec):
+def main_monitor(out_filename : str, max_n_obs : int = 10, obs_interval_sec : int = 1):
     """
     Main function for monitoring
     :param obs_interval_sec: seconds in between two observations
@@ -135,4 +135,4 @@ if __name__ == "__main__":
     """
     Entry point for the Monitor
     """
-    main_monitor(5, 'output_folder/monitored_data.csv', 1.0)
+    main_monitor('output_folder/monitored_data.csv', 5, 1.0)
