@@ -2,7 +2,7 @@ import pandas
 import sklearn.metrics
 from sklearn import tree
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier, StackingClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
@@ -19,15 +19,22 @@ if __name__ == "__main__":
 
     # splitting the dataframe in features (x) and label (y)
     y = my_df["label"]
-    x = my_df.drop(columns=["_timestamp", "label"])
+    x = my_df.drop(columns=["_timestamp", "label", "label_bin"])
 
     # partitioning the dataset into a train and a test set
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.5)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.5, shuffle=False)
 
     # Set of classifiers that I want to run and compare
-    classifiers = [tree.DecisionTreeClassifier(), GaussianNB(),
+    classifiers = [VotingClassifier(estimators=[('lda', LinearDiscriminantAnalysis()),
+                                                ('nb', GaussianNB()),
+                                                ('dt', tree.DecisionTreeClassifier())]),
+                   StackingClassifier(estimators=[('lda', LinearDiscriminantAnalysis()),
+                                                ('nb', GaussianNB()),
+                                                ('dt', tree.DecisionTreeClassifier())],
+                                      final_estimator=RandomForestClassifier(n_estimators=10)),
+                   tree.DecisionTreeClassifier(), GaussianNB(),
                    LinearDiscriminantAnalysis(), KNeighborsClassifier(n_neighbors=11),
-                   RandomForestClassifier(n_estimators=10)]
+                   RandomForestClassifier(n_estimators=10), RandomForestClassifier(n_estimators=3)]
 
     for clf in classifiers:
         # Training an algorithm
